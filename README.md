@@ -8,7 +8,6 @@
 | AI Integration | OpenAI API (ChatGPT)                                     | Prompt generation for NPCs, storylines, etc. |
 | Deployment     | Vercel / Netlify (Frontend) + Render / Railway (Backend) | Easy deploy                                  |
 
-
 🧱 Suggested Data Models
 User
 
@@ -101,54 +100,6 @@ Based on the campaign theme of [theme], suggest 3 major arcs and 2 surprise twis
 Twist Generator Prompt:
 
 Based on this session summary: [summary], give a surprise plot twist that makes sense and ties back to existing story threads.
-
-----------------------------------------------------------------------------------------------------------------------------------------
-
-📁 Project Directory Scaffold (MERN Stack)
-
-dnd-dm-tool/
-├── client/                 # React frontend
-│   ├── public/
-│   └── src/
-│       ├── components/
-│       │   ├── NPCForm.jsx
-│       │   ├── CharacterForm.jsx
-│       │   ├── StoryHelper.jsx
-│       │   ├── TwistGenerator.jsx
-│       ├── pages/
-│       │   ├── Home.jsx
-│       │   ├── Campaign.jsx
-│       │   ├── Login.jsx
-│       ├── App.jsx
-│       ├── index.js
-│       └── utils/
-│           └── api.js       # Axios instance
-├── server/                 # Node + Express backend
-│   ├── controllers/
-│   │   ├── npcController.js
-│   │   ├── characterController.js
-│   │   ├── storyController.js
-│   │   └── twistController.js
-│   ├── models/
-│   │   ├── User.js
-│   │   ├── NPC.js
-│   │   ├── Character.js
-│   │   ├── Campaign.js
-│   │   └── Session.js
-│   ├── routes/
-│   │   ├── npcRoutes.js
-│   │   ├── characterRoutes.js
-│   │   ├── storyRoutes.js
-│   │   └── twistRoutes.js
-│   ├── services/
-│   │   └── openaiService.js
-│   ├── config/
-│   │   └── db.js
-│   ├── .env
-│   └── server.js
-├── package.json
-└── README.md
-
 
 ------------------------------------------------------------------------------------------------------
 
