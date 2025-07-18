@@ -105,9 +105,7 @@ Based on this session summary: [summary], give a surprise plot twist that makes 
 ----------------------------------------------------------------------------------------------------------------------------------------
 
 📁 Project Directory Scaffold (MERN Stack)
-pgsql
-Copy
-Edit
+
 dnd-dm-tool/
 ├── client/                 # React frontend
 │   ├── public/
@@ -150,6 +148,7 @@ dnd-dm-tool/
 │   └── server.js
 ├── package.json
 └── README.md
+
 
 ------------------------------------------------------------------------------------------------------
 
