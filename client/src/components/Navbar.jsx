@@ -35,7 +35,7 @@ const Navbar = () => {
             to="/"
             sx={{ flexGrow: 1, textDecoration: 'none', color: 'inherit' }}
           >
-            D&D Assistant
+            D&D Assistant Tool
           </Typography>
 
           {/* Desktop Menu */}

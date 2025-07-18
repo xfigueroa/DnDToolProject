@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 
 // 🧱 Tus páginas (usa placeholders por ahora)
-const Home = () => <h2 style={{ padding: '1rem' }}>Bienvenido a D&D Assistant</h2>;
+const Home = () => <h2 style={{ padding: '1rem' }}>Welcome to D&D Assistant Tool</h2>;
 const Campaigns = () => <h2 style={{ padding: '1rem' }}>Campaigns Page</h2>;
 const NPCGenerator = () => <h2 style={{ padding: '1rem' }}>NPC Generator Page</h2>;
 const Characters = () => <h2 style={{ padding: '1rem' }}>Characters Page</h2>;
