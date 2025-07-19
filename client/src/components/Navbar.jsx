@@ -20,7 +20,7 @@ const Navbar = () => {
   const navLinks = [
     { text: 'Campaigns', to: '/campaigns', icon: <CampaignIcon /> },
     { text: 'NPC Generator', to: '/npc-generator', icon: <PersonIcon /> },
-    { text: 'Characters', to: '/characters', icon: <GroupIcon /> },
+    { text: 'Characters Gen', to: '/characters-gen', icon: <GroupIcon /> },
     { text: 'Sessions', to: '/sessions', icon: <BookIcon /> },
   ];
 
