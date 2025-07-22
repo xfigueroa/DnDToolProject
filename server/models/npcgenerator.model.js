@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 // Schema for NPC Generation Requests and Results
 const npcGeneratorSchema = new mongoose.Schema({
@@ -292,4 +292,4 @@ npcGeneratorSchema.statics.findByCampaign = function(campaignId) {
   return this.find({ campaignId: campaignId, isActive: true });
 };
 
-module.exports = mongoose.model('NPCGenerator', npcGeneratorSchema);
+export default mongoose.model('NPCGenerator', npcGeneratorSchema);
