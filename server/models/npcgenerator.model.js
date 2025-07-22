@@ -238,39 +238,36 @@ npcGeneratorSchema.methods.generatePrompt = function() {
   const { role, storyFit, desiredTraits, includeStats, campaignContext } = this.generationRequest;
   const { creativityLevel, settingStyle, tone } = this.generationSettings;
   
-  let prompt = `Generate a D&D NPC with the following requirements:\n\n`;
-  prompt += `Role: ${role}\n`;
-  prompt += `Story Integration: ${storyFit}\n`;
+  let prompt = `Create a D&D NPC that fits the following specifications:\n\n`;
+  prompt += `**Role:** ${role}\n`;
+  prompt += `**Story Integration:** ${storyFit}\n`;
   
   if (campaignContext) {
-    prompt += `Campaign Context: ${campaignContext}\n`;
+    prompt += `**Campaign Context:** ${campaignContext}\n`;
   }
   
   if (desiredTraits.race || desiredTraits.name || desiredTraits.class || desiredTraits.personalityTraits || desiredTraits.appearance || desiredTraits.other) {
-    prompt += `\nDesired Traits:\n`;
+    prompt += `\n**Desired Traits:**\n`;
     if (desiredTraits.race) prompt += `- Race: ${desiredTraits.race}\n`;
-    if (desiredTraits.name) prompt += `- Name: ${desiredTraits.name}\n`;
+    if (desiredTraits.name) prompt += `- Name preference: ${desiredTraits.name}\n`;
     if (desiredTraits.class) prompt += `- Class: ${desiredTraits.class}\n`;
     if (desiredTraits.personalityTraits) prompt += `- Personality: ${desiredTraits.personalityTraits}\n`;
     if (desiredTraits.appearance) prompt += `- Appearance: ${desiredTraits.appearance}\n`;
-    if (desiredTraits.other) prompt += `- Other: ${desiredTraits.other}\n`;
+    if (desiredTraits.other) prompt += `- Other requirements: ${desiredTraits.other}\n`;
   }
   
-  prompt += `\nGeneration Style: ${creativityLevel} creativity, ${settingStyle} setting, ${tone} tone\n`;
-  
-  prompt += `\nPlease provide:\n`;
-  prompt += `1. Primary name and 3-5 alternative name options\n`;
-  prompt += `2. Race, class, and background\n`;
-  prompt += `3. Personality traits, ideals, bonds, and flaws\n`;
-  prompt += `4. Physical appearance and mannerisms\n`;
-  prompt += `5. Occupation and typical location\n`;
-  prompt += `6. How they integrate into the story/campaign\n`;
+  prompt += `\n**Generation Parameters:**\n`;
+  prompt += `- Creativity Level: ${creativityLevel}\n`;
+  prompt += `- Setting Style: ${settingStyle}\n`;
+  prompt += `- Tone: ${tone}\n`;
   
   if (includeStats) {
-    prompt += `7. Full D&D 5e stats including ability scores, AC, HP, skills, and equipment\n`;
+    prompt += `\n**Include Full D&D 5e Statistics:** Generate complete ability scores, AC, HP, saving throws, skills, languages, and equipment appropriate for this character's class and level.\n`;
+  } else {
+    prompt += `\n**Basic Character Only:** Do not include detailed combat statistics - focus on personality, appearance, and story elements.\n`;
   }
   
-  prompt += `\nFormat the response as a structured character sheet that can be easily parsed.`;
+  prompt += `\nReturn a JSON object with all character details structured according to the provided schema. Ensure the character is compelling, fits the requested role perfectly, and integrates seamlessly into the story context.`;
   
   return prompt;
 };

@@ -47,21 +47,170 @@ const generateNPC = async (req, res) => {
     const prompt = npcRequest.generatePrompt();
     npcRequest.generatedNPC.aiPromptUsed = prompt;
 
-    // Call ChatGPT API
+    // Call ChatGPT API with structured output
     const openai = getOpenAIClient();
     const completion = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
-          content: "You are an expert D&D Dungeon Master and character creator. Generate detailed, creative NPCs that fit seamlessly into D&D campaigns. Always provide structured responses that can be easily parsed."
+          content: "You are an expert D&D Dungeon Master and character creator. Generate detailed, creative NPCs that fit seamlessly into D&D campaigns. Return the response as a structured JSON object that matches the provided schema."
         },
         {
           role: "user",
           content: prompt
         }
       ],
-      max_tokens: includeStats ? 2000 : 1200,
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "npc_character",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              name: {
+                type: "string",
+                description: "Primary name of the NPC"
+              },
+              alternativeNames: {
+                type: "array",
+                items: {
+                  type: "string"
+                },
+                description: "3-5 alternative name options"
+              },
+              race: {
+                type: "string",
+                description: "Character race (e.g., Human, Elf, Tiefling)"
+              },
+              class: {
+                type: "string", 
+                description: "Character class (e.g., Rogue, Fighter, Wizard)"
+              },
+              background: {
+                type: "string",
+                description: "Character background (e.g., Criminal, Noble, Folk Hero)"
+              },
+              occupation: {
+                type: "string",
+                description: "Current occupation or role in society"
+              },
+              location: {
+                type: "string",
+                description: "Where the character can typically be found"
+              },
+              personalityTraits: {
+                type: "array",
+                items: {
+                  type: "string"
+                },
+                description: "List of personality traits"
+              },
+              ideals: {
+                type: "string",
+                description: "Character's ideals and motivations"
+              },
+              bonds: {
+                type: "string", 
+                description: "Important connections and relationships"
+              },
+              flaws: {
+                type: "string",
+                description: "Character weaknesses and flaws"
+              },
+              physicalAppearance: {
+                type: "string",
+                description: "Detailed physical description"
+              },
+              mannerisms: {
+                type: "string",
+                description: "Distinctive behaviors and habits"
+              },
+              roleInStory: {
+                type: "string",
+                description: "How the character fits into the campaign story"
+              },
+              stats: {
+                type: "object",
+                properties: {
+                  abilityScores: {
+                    type: "object",
+                    properties: {
+                      strength: { type: "integer", minimum: 1, maximum: 30 },
+                      dexterity: { type: "integer", minimum: 1, maximum: 30 },
+                      constitution: { type: "integer", minimum: 1, maximum: 30 },
+                      intelligence: { type: "integer", minimum: 1, maximum: 30 },
+                      wisdom: { type: "integer", minimum: 1, maximum: 30 },
+                      charisma: { type: "integer", minimum: 1, maximum: 30 }
+                    },
+                    required: ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"],
+                    additionalProperties: false
+                  },
+                  armorClass: {
+                    type: "integer",
+                    description: "Armor Class value"
+                  },
+                  hitPoints: {
+                    type: "integer", 
+                    description: "Total hit points"
+                  },
+                  speed: {
+                    type: "string",
+                    description: "Movement speed (e.g., '30 ft.')"
+                  },
+                  savingThrows: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        ability: { type: "string" },
+                        bonus: { type: "integer" }
+                      },
+                      required: ["ability", "bonus"],
+                      additionalProperties: false
+                    }
+                  },
+                  skills: {
+                    type: "array",
+                    items: {
+                      type: "object", 
+                      properties: {
+                        name: { type: "string" },
+                        bonus: { type: "integer" }
+                      },
+                      required: ["name", "bonus"],
+                      additionalProperties: false
+                    }
+                  },
+                  languages: {
+                    type: "array",
+                    items: {
+                      type: "string"
+                    }
+                  },
+                  equipment: {
+                    type: "array",
+                    items: {
+                      type: "string"
+                    }
+                  }
+                },
+                required: includeStats ? ["abilityScores", "armorClass", "hitPoints", "speed", "savingThrows", "skills", "languages", "equipment"] : ["abilityScores", "savingThrows", "skills", "languages", "equipment"],
+                additionalProperties: false
+              }
+            },
+            required: [
+              "name", "alternativeNames", "race", "class", "background", 
+              "occupation", "location", "personalityTraits", "ideals", 
+              "bonds", "flaws", "physicalAppearance", "mannerisms", 
+              "roleInStory", "stats"
+            ],
+            additionalProperties: false
+          }
+        }
+      },
+      max_tokens: includeStats ? 4000 : 2000,
       temperature: generationSettings?.creativityLevel === 'creative' ? 0.9 : 
                   generationSettings?.creativityLevel === 'conservative' ? 0.3 : 0.6
     });
@@ -69,9 +218,53 @@ const generateNPC = async (req, res) => {
     const aiResponse = completion.choices[0].message.content;
     npcRequest.generatedNPC.aiResponse = aiResponse;
 
-    // Parse the AI response and populate the NPC data
-    const parsedNPC = parseAIResponse(aiResponse, includeStats);
-    Object.assign(npcRequest.generatedNPC, parsedNPC);
+    // Parse the structured JSON response
+    let parsedNPC;
+    try {
+      parsedNPC = JSON.parse(aiResponse);
+    } catch (parseError) {
+      console.error('Error parsing AI JSON response:', parseError);
+      throw new Error('AI returned invalid JSON format');
+    }
+
+    // Helper function to clean AI response text (remove formatting markers)
+    const cleanText = (text) => {
+      if (!text) return text;
+      return text.replace(/^\*\*\s*/, '').replace(/\s*\*\*$/, '').trim();
+    };
+
+    const cleanArray = (arr) => {
+      if (!Array.isArray(arr)) return arr;
+      return arr.map(item => cleanText(item));
+    };
+
+    // Map the parsed data to our NPC model structure
+    Object.assign(npcRequest.generatedNPC, {
+      name: cleanText(parsedNPC.name),
+      alternativeNames: cleanArray(parsedNPC.alternativeNames || []),
+      race: cleanText(parsedNPC.race),
+      class: cleanText(parsedNPC.class),
+      background: cleanText(parsedNPC.background),
+      occupation: cleanText(parsedNPC.occupation),
+      location: cleanText(parsedNPC.location),
+      personalityTraits: cleanArray(parsedNPC.personalityTraits || []),
+      ideals: cleanText(parsedNPC.ideals),
+      bonds: cleanText(parsedNPC.bonds),
+      flaws: cleanText(parsedNPC.flaws),
+      appearance: cleanText(parsedNPC.physicalAppearance),
+      mannerisms: cleanText(parsedNPC.mannerisms),
+      roleInStory: cleanText(parsedNPC.roleInStory),
+      stats: {
+        abilityScores: parsedNPC.stats?.abilityScores || {},
+        armorClass: parsedNPC.stats?.armorClass,
+        hitPoints: parsedNPC.stats?.hitPoints,
+        speed: cleanText(parsedNPC.stats?.speed),
+        savingThrows: parsedNPC.stats?.savingThrows || [],
+        skills: parsedNPC.stats?.skills || [],
+        languages: cleanArray(parsedNPC.stats?.languages || []),
+        equipment: cleanArray(parsedNPC.stats?.equipment || [])
+      }
+    });
 
     // Save the generated NPC
     await npcRequest.save();
