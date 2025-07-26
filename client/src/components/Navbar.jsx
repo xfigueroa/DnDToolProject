@@ -9,6 +9,7 @@ import CampaignIcon from '@mui/icons-material/Flag';
 import PersonIcon from '@mui/icons-material/Person';
 import GroupIcon from '@mui/icons-material/Group';
 import BookIcon from '@mui/icons-material/MenuBook';
+import SigninModal from './SigninModal';
 
 const Navbar = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -24,72 +25,40 @@ const Navbar = () => {
     { text: 'Sessions', to: '/sessions', icon: <BookIcon /> },
   ];
 
+  const [isSigninOpen, setIsSigninOpen] = useState(false);
+
   return (
     <>
-      <AppBar position="static" color="primary">
+      <AppBar position="static" color="primary" sx={{ margin: 0, padding: 0, boxShadow: 'none' }}>
         <Toolbar>
+          {/* Empty space to balance layout */}
+          <Box sx={{ flex: 1 }} />
+
+
           {/* Logo / Title */}
           <Typography
             variant="h6"
             component={RouterLink}
             to="/"
-            sx={{ flexGrow: 1, textDecoration: 'none', color: 'inherit' }}
+            sx={{ flexGrow: 1, textAlign: 'center', textDecoration: 'none', color: 'inherit' }}
           >
             D&D Assistant Tool
           </Typography>
 
-          {/* Desktop Menu */}
-          {!isMobile ? (
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              {navLinks.map((link) => (
-                <Button
-                  key={link.text}
-                  component={RouterLink}
-                  to={link.to}
-                  color="inherit"
-                  startIcon={link.icon}
-                >
-                  {link.text}
-                </Button>
-              ))}
-              {user && (
-                <Typography variant="body2" sx={{ ml: 2 }}>
-                  👤 {user.username}
-                </Typography>
-              )}
-            </Box>
-          ) : (
-            <IconButton
+          {/* Sign In / Sign Up button */}
+          <Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+            <Button
+              component={RouterLink}
+              to="/auth"
               color="inherit"
-              edge="start"
-              onClick={() => setDrawerOpen(true)}
+              onClick={() => setIsSigninOpen(true)}
             >
-              <MenuIcon />
-            </IconButton>
-          )}
+              Sign In / Sign Up
+            </Button>
+          </Box>
         </Toolbar>
-      </AppBar>
-
-      {/* Drawer for Mobile */}
-      <Drawer anchor="right" open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-        <Box sx={{ width: 250 }} role="presentation" onClick={() => setDrawerOpen(false)}>
-          <List>
-            {navLinks.map((link) => (
-              <ListItem key={link.text} disablePadding>
-                <ListItemButton component={RouterLink} to={link.to}>
-                  {link.icon}
-                  <ListItemText primary={link.text} sx={{ ml: 2 }} />
-                </ListItemButton>
-              </ListItem>
-            ))}
-            {user && (
-              <ListItem>
-                <ListItemText primary={`👤 ${user.username}`} />
-              </ListItem>
-            )}
-          </List>
-        </Box>
-      </Drawer>
+      </AppBar>  
+          
     </>
   );
 };
