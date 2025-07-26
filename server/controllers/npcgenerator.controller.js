@@ -437,7 +437,7 @@ const getUserNPCs = async (req, res) => {
     const skip = (page - 1) * limit;
     const npcs = await NPCGenerator.find(query)
       .select('-generatedNPC.aiResponse -generatedNPC.aiPromptUsed') // Exclude large fields
-      .populate('campaignId', 'name')
+      // .populate('campaignId', 'name') // TODO: Add Campaign model and uncomment this line
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -477,7 +477,7 @@ const getNPC = async (req, res) => {
       _id: id, 
       createdBy: userId, 
       isActive: true 
-    }).populate('campaignId', 'name');
+    }); // .populate('campaignId', 'name'); // TODO: Add Campaign model and uncomment this line
 
     if (!npc) {
       return res.status(404).json({
@@ -518,7 +518,7 @@ const updateNPC = async (req, res) => {
         }
       },
       { new: true, runValidators: true }
-    ).populate('campaignId', 'name');
+    ); // .populate('campaignId', 'name'); // TODO: Add Campaign model and uncomment this line
 
     if (!npc) {
       return res.status(404).json({
@@ -543,29 +543,63 @@ const updateNPC = async (req, res) => {
   }
 };
 
-// Delete NPC (soft delete)
+// Delete NPC (enhanced soft delete with auto-cleanup)
 const deleteNPC = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
+    const { permanent = false } = req.query; // Allow permanent deletion via query parameter
 
-    const npc = await NPCGenerator.findOneAndUpdate(
-      { _id: id, createdBy: userId, isActive: true },
-      { isActive: false },
-      { new: true }
-    );
+    if (permanent) {
+      // Hard delete - remove completely from database
+      const npc = await NPCGenerator.findOneAndDelete({
+        _id: id,
+        createdBy: userId,
+        isActive: true
+      });
 
-    if (!npc) {
-      return res.status(404).json({
-        success: false,
-        message: 'NPC not found'
+      if (!npc) {
+        return res.status(404).json({
+          success: false,
+          message: 'NPC not found'
+        });
+      }
+
+      res.json({
+        success: true,
+        message: 'NPC permanently deleted'
+      });
+    } else {
+      // Soft delete with auto-cleanup after 30 days
+      const thirtyDaysFromNow = new Date();
+      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+
+      const npc = await NPCGenerator.findOneAndUpdate(
+        { _id: id, createdBy: userId, isActive: true },
+        { 
+          isActive: false,
+          deletedAt: new Date(),
+          permanentDeleteAt: thirtyDaysFromNow
+        },
+        { new: true }
+      );
+
+      if (!npc) {
+        return res.status(404).json({
+          success: false,
+          message: 'NPC not found'
+        });
+      }
+
+      res.json({
+        success: true,
+        message: 'NPC deleted successfully. Can be restored within 30 days.',
+        data: {
+          deletedAt: npc.deletedAt,
+          permanentDeleteAt: npc.permanentDeleteAt
+        }
       });
     }
-
-    res.json({
-      success: true,
-      message: 'NPC deleted successfully'
-    });
 
   } catch (error) {
     console.error('Error deleting NPC:', error);
@@ -681,6 +715,145 @@ const regenerateNPC = async (req, res) => {
   }
 };
 
+// Get deleted NPCs (trash/recycle bin functionality)
+const getDeletedNPCs = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { page = 1, limit = 10 } = req.query;
+
+    // Build query for deleted NPCs - include both new system and legacy deleted NPCs
+    const query = { 
+      createdBy: userId, 
+      isActive: false,
+      $or: [
+        { permanentDeleteAt: { $gt: new Date() } }, // New system: NPCs within restoration period
+        { permanentDeleteAt: { $exists: false } }   // Legacy: NPCs deleted before enhanced system
+      ]
+    };
+
+    // Execute query with pagination
+    const skip = (page - 1) * limit;
+    const deletedNPCs = await NPCGenerator.find(query)
+      .select('generatedNPC.name generatedNPC.race generatedNPC.occupation generationRequest.role deletedAt permanentDeleteAt')
+      .sort({ deletedAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await NPCGenerator.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: {
+        deletedNPCs,
+        pagination: {
+          current: parseInt(page),
+          total: Math.ceil(total / limit),
+          hasNext: skip + deletedNPCs.length < total,
+          hasPrev: page > 1
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching deleted NPCs:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch deleted NPCs',
+      error: error.message
+    });
+  }
+};
+
+// Restore a deleted NPC
+const restoreNPC = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const npc = await NPCGenerator.findOneAndUpdate(
+      { 
+        _id: id, 
+        createdBy: userId, 
+        isActive: false,
+        permanentDeleteAt: { $gt: new Date() } // Can only restore if not permanently deleted
+      },
+      { 
+        isActive: true,
+        $unset: { 
+          deletedAt: 1,
+          permanentDeleteAt: 1 
+        }
+      },
+      { new: true }
+    );
+
+    if (!npc) {
+      return res.status(404).json({
+        success: false,
+        message: 'Deleted NPC not found or restoration period has expired'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'NPC restored successfully',
+      data: npc
+    });
+
+  } catch (error) {
+    console.error('Error restoring NPC:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to restore NPC',
+      error: error.message
+    });
+  }
+};
+
+// Cleanup expired NPCs (to be called periodically)
+const cleanupExpiredNPCs = async (req, res) => {
+  try {
+    // This endpoint should be protected and only accessible by admins or cron jobs
+    const result = await NPCGenerator.deleteMany({
+      isActive: false,
+      permanentDeleteAt: { $lte: new Date() }
+    });
+
+    res.json({
+      success: true,
+      message: `Cleaned up ${result.deletedCount} expired NPCs`,
+      deletedCount: result.deletedCount
+    });
+
+  } catch (error) {
+    console.error('Error during cleanup:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to cleanup expired NPCs',
+      error: error.message
+    });
+  }
+};
+
+// Utility function for automatic cleanup (can be called internally)
+const performAutomaticCleanup = async () => {
+  try {
+    const result = await NPCGenerator.deleteMany({
+      isActive: false,
+      permanentDeleteAt: { $lte: new Date() }
+    });
+    
+    if (result.deletedCount > 0) {
+      console.log(`Automatic cleanup: Removed ${result.deletedCount} expired NPCs`);
+    }
+    
+    return result.deletedCount;
+  } catch (error) {
+    console.error('Error during automatic cleanup:', error);
+    return 0;
+  }
+};
+
 export {
   generateNPC,
   getUserNPCs,
@@ -688,5 +861,9 @@ export {
   updateNPC,
   deleteNPC,
   getCampaignNPCs,
-  regenerateNPC
+  regenerateNPC,
+  getDeletedNPCs,
+  restoreNPC,
+  cleanupExpiredNPCs,
+  performAutomaticCleanup
 };

@@ -184,6 +184,14 @@ const npcGeneratorSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  deletedAt: {
+    type: Date,
+    description: "When the NPC was soft-deleted"
+  },
+  permanentDeleteAt: {
+    type: Date,
+    description: "When the NPC should be permanently deleted (auto-cleanup)"
+  },
   tags: [{
     type: String,
     trim: true
@@ -223,6 +231,8 @@ npcGeneratorSchema.index({ campaignId: 1 });
 npcGeneratorSchema.index({ 'generatedNPC.name': 1 });
 npcGeneratorSchema.index({ 'generationRequest.role': 1 });
 npcGeneratorSchema.index({ isActive: 1 });
+npcGeneratorSchema.index({ createdBy: 1, isActive: 1 }); // Compound index for user queries
+npcGeneratorSchema.index({ isActive: 1, permanentDeleteAt: 1 }); // For cleanup queries
 npcGeneratorSchema.index({ tags: 1 });
 
 // Virtual for getting alternative names as a formatted string

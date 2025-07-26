@@ -6,7 +6,10 @@ import {
   updateNPC,
   deleteNPC,
   getCampaignNPCs,
-  regenerateNPC
+  regenerateNPC,
+  getDeletedNPCs,
+  restoreNPC,
+  cleanupExpiredNPCs
 } from '../controllers/npcgenerator.controller.js';
 import { authenticateToken } from '../middleware/auth.js';
 
@@ -74,11 +77,38 @@ router.put('/:id', updateNPC);
 
 /**
  * @route   DELETE /api/npc-generator/:id
- * @desc    Delete an NPC (soft delete)
+ * @desc    Delete an NPC (soft delete by default, permanent with ?permanent=true)
+ * @access  Private
+ * @params  { id: string }
+ * @query   { permanent?: boolean }
+ */
+router.delete('/:id', deleteNPC);
+
+/**
+ * @route   GET /api/npc-generator/trash/deleted
+ * @desc    Get all soft-deleted NPCs (trash/recycle bin)
+ * @access  Private
+ * @query   {
+ *            page?: number (default: 1),
+ *            limit?: number (default: 10)
+ *          }
+ */
+router.get('/trash/deleted', getDeletedNPCs);
+
+/**
+ * @route   POST /api/npc-generator/:id/restore
+ * @desc    Restore a soft-deleted NPC
  * @access  Private
  * @params  { id: string }
  */
-router.delete('/:id', deleteNPC);
+router.post('/:id/restore', restoreNPC);
+
+/**
+ * @route   POST /api/npc-generator/admin/cleanup
+ * @desc    Manually trigger cleanup of expired NPCs (admin only)
+ * @access  Private (should be admin-only in production)
+ */
+router.post('/admin/cleanup', cleanupExpiredNPCs);
 
 /**
  * @route   GET /api/npc-generator/campaign/:campaignId
